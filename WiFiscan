@@ -1,0 +1,215 @@
+#!/bin/bash
+
+#This script will walk the user thru the process of 
+#scanning a wireless network using the aircrack-ng 
+#package (ie. airmon-ng, airodump-ng, etc.)
+
+airmon-ng #Use airmon-ng to show the available wireless interfaces
+
+#Variables:
+default_interface="wlan0" #Set default value for wireless interface as wlan0
+default_interface_stop="wlan0mon"
+m="mon" #String used to create name of interface to monitor
+
+function Menu {
+	echo "Please choose one option:"
+	echo "1) Monitor an interface"
+	echo "2) Stop an interface"
+	echo "3) Create an wireless access point"
+	echo "4) Exit"
+	echo ""
+
+	read choice
+
+	case $choice in
+		1) 	Monitor;; #Run function "Monitor" to scan for wireless networks
+		2) 	Stop;; #Run function "Stop" to stop a specific interface
+		3)	Create;; #Run function "Create" to create a wireless access point
+		4|*) 	Exit;; #Nevermind!
+	esac
+}
+
+function Monitor {
+
+	echo "Please enter the network interface you would like to use [wlan0]:"
+
+	read interface
+
+	#Confirm that the user entered a value and, if not, use default
+	while [[ -z "$interface" ]]; 
+	do
+		interface=$default_interface
+		echo "Interface chosen: "$interface
+	done 
+
+	clear
+
+	echo -e "\033[4m         ***** airmon-ng *****       \033[0m "
+	echo "                                      "
+	echo "The airmon-ng software will identify  " 
+	echo "all available wireless networks and   "
+	echo "then list associated information such "
+	echo "as ESSID, channel, etc.  When you see "
+	echo "the network you would like to monitor,"
+	echo "please note:                          "
+	echo "                                      "
+	echo "     (1) BSSID                        "
+	echo "     (2) channel                      "
+	echo "                                      "
+	echo "Then, press CTRL-C                    "
+	echo "                                      " 
+	echo "NOTE:  The program can take some time "
+	echo "(up to one minute) to initialize prior"
+	echo "to displaying the network information."
+	echo "Please be patient!                    "
+        echo "                                      "
+        echo -e "******  Press \033[5;36;47m-Enter-\033[0m to begin  ******" 
+        echo "                                      "
+
+	read Empty_1
+
+	airmon-ng check kill #Kill any processes which may interfere
+	airmon-ng start $interface 
+
+	monitor_interface=$interface$m #append "mon" to interface for the airoump-ng function
+
+	clear
+
+	airodump-ng $monitor_interface #Use airodump-ng to monitor wireless activity using chosen interface
+
+#	airodump-ng $interface #Use airodump-ng to monitor wireless activity using chosen interface (alternate version of script - to run, comment "monitor_interface" and "airodump-ng" lines above)
+
+	echo ""
+	echo "Please enter the BSSID of the network"
+	echo "you would like to monitor:"
+	echo ""
+
+	read BSSID
+
+	#Confirm that the user enters a BSSID
+	while [[ -z "$BSSID" ]]; do
+		read -p "Please enter a BSSID" BSSID
+	done
+
+	#echo "$BSSID" #Print input for testing purposes
+
+	echo ""
+	echo "...and the wireless channel..."
+	echo ""
+
+	read channel
+
+	while [[ -z "$channel" ]]; do
+		read -p "Please enter the wireless channel" channel
+	done
+
+	#echo "$channel" #Print input for testing purposes
+
+	clear
+
+        echo -e "\033[4m        ***** airodump-ng *****      \033[0m "
+        echo "                                      "
+        echo "The airodump-ng software will capture " 
+        echo "all available traffic from the chosen "
+	echo "wireless network.  To be useful, the  "
+	echo "scan should be allowed to run until a "
+	echo "handshake is captured (indicated in   "
+	echo "the upper right of the screen).  Once "
+        echo "satisfied, press CTRL-C to terminate  "
+	echo "the scan.                             "
+	echo "                                      " 
+        echo "NOTE:  The program will create 5 files"
+        echo "in the current working directory.  The"
+        echo ".cap file (specifically) contains the "
+	echo "most useful data and can be viewed in "
+	echo "Wireshark.                            "
+        echo "                                      "
+        echo -e "******  Press \033[5;36;47m-Enter-\033[0m to begin  ******" 
+        echo "                                      "
+
+	read Empty_2
+
+	clear
+
+	#Use airodump-ng to monitor wireless activity on specific network (ie. BSSID and channel)
+
+	airodump-ng $monitor_interface --bssid $BSSID --channel $channel --write scan
+
+#	airodump-ng $interface --bssid $BSSID --channel $channel --write scan (alternate version - to use, comment other "airodump-ng" line above)
+
+}
+
+function Stop {
+
+	echo "Please enter the network interface you would like to stop [wlan0mon]:"
+
+        read interface_stop
+
+        while [[ -z "$interface_stop" ]] 
+        do
+                interface_stop=$default_interface_stop
+                echo "Interface chosen: "$interface_stop
+        done
+
+        airmon-ng stop $interface_stop
+	clear
+	airmon-ng
+
+}
+
+function Create {
+
+        echo "Please enter the network interface you would like to use [wlan0]:"
+
+        read interface
+
+        #Confirm that the user entered a value and, if not, use default
+        while [[ -z "$interface" ]]; 
+        do
+                interface=$default_interface
+                echo "Interface chosen: "$interface
+        done 
+
+	echo ""
+        echo "...and the SSID you would like to use [ex. Wireless]..."
+	echo ""
+
+        read SSID
+
+        while [[ -z "$SSID" ]] 
+        do
+		read -p "Please enter a SSID " SSID
+        done
+
+        clear
+
+        echo -e "\033[4m         ***** airbase-ng *****       \033[0m "
+        echo "                                      "
+        echo "The airbase-ng software will create a " 
+        echo "wireless broadcast using the interface"
+        echo "and SSID specified.  To terminate the "
+        echo "broadcast, press CTRL-C.              "
+        echo "                                      "
+        echo -e "******  Press \033[5;36;47m-Enter-\033[0m to begin  ******" 
+        echo "                                      "
+
+	read Empty_3
+
+	clear
+
+        #Use airbase-ng to broadcast a wireless network
+
+        airbase-ng $interface -e $SSID 
+
+}
+
+function Exit {
+
+	echo ""
+	echo "Goodbye!"
+	echo ""
+	exit
+
+}
+
+Menu
